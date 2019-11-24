@@ -1,11 +1,31 @@
 version: '3'
 
 services:
-  server:
+  nginx:
+    image: nginx
+    restart: always
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    ports:
+      - '8000:80'
+    depends_on:
+      - server1
+      - server2
+    networks:
+      - db_nw
+
+  server1:
     build: ./server
     restart: always
-    ports:
-      - '8000:8000'
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - db_nw
+
+  server2:
+    build: ./server
+    restart: always
     depends_on:
       - mysql
       - redis
