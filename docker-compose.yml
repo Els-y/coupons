@@ -1,0 +1,35 @@
+version: '3'
+
+services:
+  server:
+    build: ./server
+    restart: always
+    ports:
+      - '8000:8000'
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - db_nw
+
+  mysql:
+    image: mysql:8.0.18
+    restart: always
+    volumes:
+      - ./mysql/data:/var/lib/mysql
+      - ./mysql/my.cnf:/etc/mysql/my.cnf
+    environment:
+      MYSQL_ROOT_PASSWORD: coupons
+      MYSQL_DATABASE: coupons
+    networks:
+      - db_nw
+
+  redis:
+    image: redis
+    restart: always
+    networks:
+      - db_nw
+
+networks:
+  db_nw:
+    driver: bridge
