@@ -5,7 +5,6 @@ const (
 	KindSalerInt    = 1
 	KindCustomerStr = "customer"
 	KindSalerStr    = "saler"
-	PageSize        = 20
 )
 
 var KindInt2Str = map[int]string{

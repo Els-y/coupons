@@ -7,6 +7,17 @@ import (
 	"github.com/go-ini/ini"
 )
 
+type App struct {
+	PageSize        int
+	RuntimeRootPath string
+	LogSavePath     string
+	LogSaveName     string
+	LogFileExt      string
+	TimeFormat      string
+}
+
+var AppSetting = &App{}
+
 type Server struct {
 	RunMode      string
 	HttpPort     int
@@ -46,6 +57,7 @@ func Setup() {
 		logrus.Fatalf("setting.Setup, fail to parse 'conf/app.ini': %v", err)
 	}
 
+	mapTo("app", AppSetting)
 	mapTo("server", ServerSetting)
 	mapTo("database", DatabaseSetting)
 	mapTo("redis", RedisSetting)
