@@ -4,6 +4,6 @@ RUN mkdir /server
 WORKDIR /server
 COPY . .
 
-RUN go build -v
+RUN GOPROXY=https://goproxy.io go build -v
 
 CMD ["/server/server"]
