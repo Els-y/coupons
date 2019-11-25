@@ -6,6 +6,7 @@ import (
 	"github.com/Els-y/coupons/server/pkgs/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
+	"github.com/sirupsen/logrus"
 	"strconv"
 )
 
@@ -51,6 +52,7 @@ func AddCoupons(ctx *gin.Context) {
 
 	err = models.AddCoupon(username, req.Name, req.Description, req.Stock, req.Amount)
 	if err != nil {
+		logrus.Infof("[api.AddCoupons] models.AddCoupon db error, username: %v, name: %v, err: %v", username, req.Name, err)
 		ctx.JSON(400, gin.H{
 			"errMsg": "db error",
 		})
@@ -96,6 +98,7 @@ func GetCouponsInfo(ctx *gin.Context) {
 			coupons, err = models.GetCouponsWithPage(username, true, page)
 		}
 		if err != nil {
+			logrus.Infof("[api.GetCouponsInfo] models.GetCouponsWithPage db error, username: %v, page: %v, err: %v", username, page, err)
 			ctx.JSON(400, coupons)
 			return
 		}
@@ -105,6 +108,7 @@ func GetCouponsInfo(ctx *gin.Context) {
 
 	user, err := models.GetUser(username)
 	if err != nil {
+		logrus.Infof("[api.GetCouponsInfo] models.GetUser db error, username: %v, err: %v", username, err)
 		ctx.JSON(400, gin.H{
 			"errMsg": "db error",
 		})
@@ -119,6 +123,7 @@ func GetCouponsInfo(ctx *gin.Context) {
 
 	coupons, err = models.GetCouponsWithPage(username, true, page)
 	if err != nil {
+		logrus.Infof("[api.GetCouponsInfo] models.GetCouponsWithPage db error, username: %v, page: %v, err: %v", username, page, err)
 		ctx.JSON(400, coupons)
 		return
 	}
@@ -147,6 +152,7 @@ func AssignCoupon(ctx *gin.Context) {
 
 	user, err := models.GetUser(salerName)
 	if err != nil {
+		logrus.Infof("[api.AssignCoupon] models.GetUser db error, salerName: %v, err: %v", salerName, err)
 		ctx.JSON(400, gin.H{
 			"errMsg": "db error",
 		})
@@ -159,6 +165,15 @@ func AssignCoupon(ctx *gin.Context) {
 		return
 	}
 
+	_, err = models.GetCoupon(tokenUsername, couponName)
+	if !gorm.IsRecordNotFoundError(err) {
+		logrus.Infof("[api.AssignCoupon] models.GetCoupon db error, customerName: %v, couponName: %v, err: %v", tokenUsername, couponName, err)
+		ctx.JSON(400, gin.H{
+			"errMsg": "user already have this coupon",
+		})
+		return
+	}
+
 	coupon, err := models.GetCoupon(salerName, couponName)
 	if gorm.IsRecordNotFoundError(err) {
 		ctx.JSON(400, gin.H{
@@ -167,6 +182,7 @@ func AssignCoupon(ctx *gin.Context) {
 		return
 	}
 	if err != nil {
+		logrus.Infof("[api.AssignCoupon] models.GetCoupon db error, salerName: %v, couponName: %v, err: %v", salerName, couponName, err)
 		ctx.JSON(400, gin.H{
 			"errMsg": "db error",
 		})
@@ -175,6 +191,8 @@ func AssignCoupon(ctx *gin.Context) {
 
 	ok, err := models.AssignCoupon(salerName, tokenUsername, coupon)
 	if err != nil {
+		logrus.Infof("[api.AssignCoupon] models.AssignCoupon db error, salerName: %v, customerName: %v, couponName: %v, err: %v",
+			salerName, tokenUsername, couponName, err)
 		ctx.JSON(400, gin.H{
 			"errMsg": "assign db error",
 		})

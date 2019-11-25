@@ -25,12 +25,12 @@ func AddUser(ctx *gin.Context) {
 
 	exists, err := models.ExistsUsername(req.Username)
 	if err != nil {
+		logrus.Infof("[api.AddUser] models.ExistsUsername db error, username: %v, err: %v", req.Username, err.Error())
 		ctx.JSON(400, gin.H{
 			"errMsg": "db error",
 		})
 		return
 	}
-
 	if exists {
 		ctx.JSON(400, gin.H{
 			"errMsg": "username exists",
@@ -40,7 +40,7 @@ func AddUser(ctx *gin.Context) {
 
 	err = models.AddUser(req.Username, req.Password, req.Kind)
 	if err != nil {
-		logrus.Errorf("AddUser: err= %+v", err)
+		logrus.Errorf("[api.AddUser] models.AddUser db error, username: %v, err: %v", req.Username, err)
 		ctx.JSON(400, gin.H{
 			"errMsg": "db error",
 		})
@@ -57,6 +57,7 @@ func ExistsUser(ctx *gin.Context) {
 
 	exists, err := models.ExistsUsername(username)
 	if err != nil {
+		logrus.Infof("[api.ExistsUser] models.ExistsUsername db error, username: %v, err: %v", username, err)
 		ctx.JSON(400, gin.H{
 			"errMsg": "db error",
 		})
