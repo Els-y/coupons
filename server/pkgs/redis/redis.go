@@ -88,3 +88,17 @@ func Delete(key string) (bool, error) {
 
 	return redis.Bool(conn.Do("DEL", key))
 }
+
+func Incr(key string) (int, error) {
+	conn := redisConn.Get()
+	defer conn.Close()
+
+	return redis.Int(conn.Do("INCR", key))
+}
+
+func Decr(key string) (int, error) {
+	conn := redisConn.Get()
+	defer conn.Close()
+
+	return redis.Int(conn.Do("DECR", key))
+}

@@ -6,24 +6,15 @@ services:
     restart: always
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
     ports:
       - '8000:80'
     depends_on:
-      - server1
-      - server2
+      - server
     networks:
       - db_nw
 
-  server1:
-    build: ./server
-    restart: always
-    depends_on:
-      - mysql
-      - redis
-    networks:
-      - db_nw
-
-  server2:
+  server:
     build: ./server
     restart: always
     depends_on:

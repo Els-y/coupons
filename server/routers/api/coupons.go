@@ -42,7 +42,7 @@ func AddCoupons(ctx *gin.Context) {
 		return
 	}
 
-	if username != tokenUsername || tokenKindStr == models.KindCustomerStr {
+	if username != tokenUsername || tokenKindStr != models.KindSalerStr {
 		ctx.JSON(401, gin.H{
 			"errMsg": "permission denied",
 		})
@@ -105,15 +105,16 @@ func GetCouponsInfo(ctx *gin.Context) {
 		return
 	}
 
-	user, err := models.GetUser(username)
+	user, err := GetUserWithCache(username)
 	if err != nil {
-		logrus.Infof("[api.GetCouponsInfo] models.GetUser db error, username: %v, err: %v", username, err)
+		logrus.Infof("[api.GetCouponsInfo] GetUserWithCache db error, username: %v, err: %v", username, err)
 		ctx.JSON(400, gin.H{
 			"errMsg": "db error",
 		})
 		return
 	}
-	if user.Kind == models.KindCustomerInt {
+	if user == nil || user.Kind != models.KindSalerInt {
+		logrus.Infof("[api.GetCouponsInfo] GetUserWithCache user is not a saler, username: %v", username)
 		ctx.JSON(400, gin.H{
 			"errMsg": "user is not a saler",
 		})
@@ -149,15 +150,16 @@ func AssignCoupon(ctx *gin.Context) {
 		return
 	}
 
-	user, err := models.GetUser(salerName)
+	user, err := GetUserWithCache(salerName)
 	if err != nil {
-		logrus.Infof("[api.AssignCoupon] models.GetUser db error, salerName: %v, err: %v", salerName, err)
+		logrus.Infof("[api.AssignCoupon] GetUserWithCache db error, salerName: %v, err: %v", salerName, err)
 		ctx.JSON(400, gin.H{
 			"errMsg": "db error",
 		})
 		return
 	}
-	if user.Kind == models.KindCustomerInt {
+	if user == nil || user.Kind != models.KindSalerInt {
+		logrus.Infof("[api.AssignCoupon] GetUserWithCache user is not a saler, salerName: %v", salerName)
 		ctx.JSON(400, gin.H{
 			"errMsg": "user is not a saler",
 		})

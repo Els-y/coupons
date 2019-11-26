@@ -26,8 +26,8 @@ func Setup() {
 	}
 
 	db.SingularTable(true)
-	db.DB().SetMaxIdleConns(10)
-	db.DB().SetMaxOpenConns(100)
+	db.DB().SetMaxIdleConns(1024)
+	db.DB().SetMaxOpenConns(4096)
 
 	db.AutoMigrate(&User{}, &Coupon{})
 }

@@ -14,7 +14,7 @@ func GetUserWithCache(username string) (*models.User, error) {
 	if err == nil {
 		user, err := UserBytesToStruct(userBytes)
 		if err == nil {
-			logrus.Infof("[utils.GetUser] user exists in redis, user: %+v, err: %v", user, err)
+			logrus.Infof("[utils.GetUser] user exists in redis, user: %+v", user)
 			return user, nil
 		}
 	}
@@ -54,7 +54,7 @@ func GetCouponWithCache(username, couponName string) (*models.Coupon, error) {
 	if err == nil {
 		coupon, err := CouponBytesToStruct(couponBytes)
 		if err == nil {
-			logrus.Infof("[utils.GetCouponWithCache] coupon exists in redis, coupon: %+v, err: %v", coupon, err)
+			logrus.Infof("[utils.GetCouponWithCache] coupon exists in redis, coupon: %+v", coupon)
 			return coupon, nil
 		}
 	}
