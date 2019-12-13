@@ -29,6 +29,8 @@ services:
     volumes:
       - ./mysql/data:/var/lib/mysql
       - ./mysql/my.cnf:/etc/mysql/my.cnf
+    ports:
+      - '3306:3306'
     environment:
       MYSQL_ROOT_PASSWORD: coupons
       MYSQL_DATABASE: coupons
@@ -38,6 +40,41 @@ services:
   redis:
     image: redis
     restart: always
+    networks:
+      - db_nw
+
+  nats:
+    image: nats:latest
+    restart: always
+    ports:
+      - '4222:4222'
+    networks:
+      - db_nw
+
+  subscriber:
+    build: 
+      context: ./subscriber
+    restart: always
+    depends_on:
+      - mysql
+    networks:
+      - db_nw
+
+  subscriber1:
+    build: 
+      context: ./subscriber
+    restart: always
+    depends_on:
+      - mysql
+    networks:
+      - db_nw
+
+  subscriber2:
+    build: 
+      context: ./subscriber
+    restart: always
+    depends_on:
+      - mysql
     networks:
       - db_nw
 
