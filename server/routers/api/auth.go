@@ -20,7 +20,7 @@ func Auth(ctx *gin.Context) {
 	ctx.Header("Authorization", "")
 
 	if err != nil {
-		ctx.JSON(400, gin.H{
+		ctx.JSON(401, gin.H{
 			"kind":   "",
 			"errMsg": "params error",
 		})
@@ -29,7 +29,7 @@ func Auth(ctx *gin.Context) {
 
 	user, err := models.GetUserWithPwd(req.Username, req.Password)
 	if gorm.IsRecordNotFoundError(err) {
-		ctx.JSON(400, gin.H{
+		ctx.JSON(401, gin.H{
 			"kind":   "",
 			"errMsg": "username or password wrong",
 		})
@@ -37,7 +37,7 @@ func Auth(ctx *gin.Context) {
 	}
 	if err != nil {
 		logrus.Infof("[api.Auth] models.GetUserWithPwd db error, username: %v, err: %+v", req.Username, err)
-		ctx.JSON(400, gin.H{
+		ctx.JSON(401, gin.H{
 			"kind":   "",
 			"errMsg": "db error",
 		})
@@ -49,7 +49,7 @@ func Auth(ctx *gin.Context) {
 	err = redis.Set(redis.GenAuthorizationKey(token), 1)
 	if err != nil {
 		logrus.Infof("[api.Auth] redis error, username: %v", req.Username)
-		ctx.JSON(400, gin.H{
+		ctx.JSON(401, gin.H{
 			"kind":   "",
 			"errMsg": "redis error",
 		})
