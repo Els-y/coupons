@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/Els-y/coupons/server/models"
+	"github.com/Els-y/coupons/server/pkgs/redis"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
@@ -23,18 +24,17 @@ func AddUser(ctx *gin.Context) {
 		return
 	}
 
-	user, err := GetUserWithCache(req.Username)
+	userKindStr, err := GetUserKindWithCache(req.Username)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
+		logrus.WithError(err).WithFields(logrus.Fields{
 			"username": req.Username,
-			"err":      err,
-		}).Warn("[api.AddUser] GetUserWithCache db error")
+		}).Warn("[api.AddUser] GetUserKindWithCache db error")
 		ctx.JSON(400, gin.H{
 			"errMsg": "db error",
 		})
 		return
 	}
-	if user != nil {
+	if userKindStr != "" {
 		ctx.JSON(400, gin.H{
 			"errMsg": "username exists",
 		})
@@ -43,14 +43,21 @@ func AddUser(ctx *gin.Context) {
 
 	err = models.AddUser(req.Username, req.Password, req.Kind)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
+		logrus.WithError(err).WithFields(logrus.Fields{
 			"username": req.Username,
-			"err":      err,
 		}).Warn("[api.AddUser] models.AddUser db error")
 		ctx.JSON(400, gin.H{
 			"errMsg": "db error",
 		})
 		return
+	}
+
+	kindStr := models.KindInt2Str[req.Kind]
+	err = redis.Set(redis.GenUserKindKey(req.Username), kindStr, 5*60)
+	if err != nil {
+		logrus.WithError(err).Warn("[api.AddUser] redis.Set error")
+	} else {
+		logrus.Info("[api.AddUser] redis.Set success")
 	}
 
 	ctx.JSON(200, gin.H{
