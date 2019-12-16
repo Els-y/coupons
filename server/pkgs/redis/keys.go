@@ -8,6 +8,10 @@ func GenUserKey(username string) string {
 	return "user:" + username
 }
 
+func GenUserKindKey(username string) string {
+	return "user:" + username + ":kind"
+}
+
 func GenCouponKey(username, couponName string) string {
 	return "coupon:" + username + ":" + couponName
 }

@@ -15,26 +15,26 @@ func GetUserWithCache(username string) (*models.User, error) {
 	if err == nil {
 		user, err := UserBytesToStruct(userBytes)
 		if err == nil {
-			logger.Info("[utils.GetUser] user exists in redis")
+			logger.Info("[utils.GetUserWithCache] user exists in redis")
 			return user, nil
 		}
 	}
 
 	user, err := models.GetUser(username)
 	if gorm.IsRecordNotFoundError(err) {
-		logger.Info("[utils.GetUser] models.GetUser user not exists")
+		logger.Info("[utils.GetUserWithCache] models.GetUser user not exists")
 		return nil, nil
 	}
 	if err != nil {
-		logger.WithError(err).Warn("[utils.GetUser] models.GetUser db error")
+		logger.WithError(err).Warn("[utils.GetUserWithCache] models.GetUser db error")
 		return nil, err
 	}
 
 	err = redis.Set(key, user, 5*60)
 	if err != nil {
-		logger.WithError(err).Warn("[utils.GetUser] redis.Set error")
+		logger.WithError(err).Warn("[utils.GetUserWithCache] redis.Set error")
 	} else {
-		logger.Info("[utils.GetUser] redis.Set success")
+		logger.Info("[utils.GetUserWithCache] redis.Set success")
 	}
 
 	return user, nil
@@ -125,4 +125,46 @@ func CheckIfUserHasCoupon(username, couponName string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func GetUserKindWithCache(username string) (string, error) {
+	logger := logrus.WithFields(logrus.Fields{"func": "utils.GetUserKindWithCache", "username": username})
+	key := redis.GenUserKindKey(username)
+	kindBytes, err := redis.Get(key)
+	if err == nil && kindBytes != nil {
+		kindStr, err := UserKindBytesToString(kindBytes)
+		if err == nil {
+			logger.WithFields(logrus.Fields{"kind": kindStr}).Info("get user kind in redis success")
+			return kindStr, nil
+		}
+	}
+
+	user, err := models.GetUser(username)
+	if gorm.IsRecordNotFoundError(err) {
+		logger.Info("models.GetUser user not exists")
+		return "", nil
+	}
+	if err != nil {
+		logger.WithError(err).Warn("models.GetUser db error")
+		return "", err
+	}
+
+	kindStr := models.KindInt2Str[user.Kind]
+	err = redis.Set(key, kindStr, 5*60)
+	if err != nil {
+		logger.WithError(err).Warn("redis.Set error")
+	} else {
+		logger.Info("redis.Set success")
+	}
+
+	return kindStr, nil
+}
+
+func UserKindBytesToString(kindBytes []byte) (string, error) {
+	var kindStr string
+	err := json.Unmarshal(kindBytes, &kindStr)
+	if err != nil {
+		return "", err
+	}
+	return kindStr, nil
 }
