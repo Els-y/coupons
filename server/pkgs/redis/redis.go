@@ -3,20 +3,20 @@ package redis
 import (
 	"encoding/json"
 	"github.com/Els-y/coupons/server/pkgs/setting"
-	"github.com/gomodule/redigo/redis"
+	redigo "github.com/gomodule/redigo/redis"
 	"time"
 )
 
-var redisConn *redis.Pool
+var redisConn *redigo.Pool
 
 // Setup Initialize the Redis instance
 func Setup() error {
-	redisConn = &redis.Pool{
+	redisConn = &redigo.Pool{
 		MaxIdle:     setting.RedisSetting.MaxIdle,
 		MaxActive:   setting.RedisSetting.MaxActive,
 		IdleTimeout: setting.RedisSetting.IdleTimeout,
-		Dial: func() (redis.Conn, error) {
-			c, err := redis.Dial("tcp", setting.RedisSetting.Host)
+		Dial: func() (redigo.Conn, error) {
+			c, err := redigo.Dial("tcp", setting.RedisSetting.Host)
 			if err != nil {
 				return nil, err
 			}
@@ -28,7 +28,7 @@ func Setup() error {
 			}
 			return c, err
 		},
-		TestOnBorrow: func(c redis.Conn, t time.Time) error {
+		TestOnBorrow: func(c redigo.Conn, t time.Time) error {
 			_, err := c.Do("PING")
 			return err
 		},
@@ -38,7 +38,7 @@ func Setup() error {
 }
 
 // Set a key/value
-func Set(key string, data interface{}) error {
+func Set(key string, data interface{}, time int) error {
 	conn := redisConn.Get()
 	defer conn.Close()
 
@@ -52,6 +52,13 @@ func Set(key string, data interface{}) error {
 		return err
 	}
 
+	if time > 0 {
+		_, err = conn.Do("EXPIRE", key, time)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -60,7 +67,7 @@ func Exists(key string) bool {
 	conn := redisConn.Get()
 	defer conn.Close()
 
-	exists, err := redis.Bool(conn.Do("EXISTS", key))
+	exists, err := redigo.Bool(conn.Do("EXISTS", key))
 	if err != nil {
 		return false
 	}
@@ -73,7 +80,7 @@ func Get(key string) ([]byte, error) {
 	conn := redisConn.Get()
 	defer conn.Close()
 
-	reply, err := redis.Bytes(conn.Do("GET", key))
+	reply, err := redigo.Bytes(conn.Do("GET", key))
 	if err != nil {
 		return nil, err
 	}
@@ -86,19 +93,40 @@ func Delete(key string) (bool, error) {
 	conn := redisConn.Get()
 	defer conn.Close()
 
-	return redis.Bool(conn.Do("DEL", key))
+	return redigo.Bool(conn.Do("DEL", key))
 }
 
 func Incr(key string) (int, error) {
 	conn := redisConn.Get()
 	defer conn.Close()
 
-	return redis.Int(conn.Do("INCR", key))
+	return redigo.Int(conn.Do("INCR", key))
 }
 
 func Decr(key string) (int, error) {
 	conn := redisConn.Get()
 	defer conn.Close()
 
-	return redis.Int(conn.Do("DECR", key))
+	return redigo.Int(conn.Do("DECR", key))
+}
+
+func IncrBy(key string, value int) (int, error) {
+	conn := redisConn.Get()
+	defer conn.Close()
+
+	return redigo.Int(conn.Do("INCRBY", key, value))
+}
+
+func SAdd(key, value string) (bool, error) {
+	conn := redisConn.Get()
+	defer conn.Close()
+
+	return redigo.Bool(conn.Do("SADD", key, value))
+}
+
+func SIsmember(key, value string) (bool, error) {
+	conn := redisConn.Get()
+	defer conn.Close()
+
+	return redigo.Bool(conn.Do("SISMEMBER", key, value))
 }

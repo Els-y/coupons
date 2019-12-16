@@ -25,7 +25,10 @@ func AddUser(ctx *gin.Context) {
 
 	user, err := GetUserWithCache(req.Username)
 	if err != nil {
-		logrus.Infof("[api.AddUser] GetUserWithCache db error, username: %v, err: %v", req.Username, err.Error())
+		logrus.WithFields(logrus.Fields{
+			"username": req.Username,
+			"err":      err,
+		}).Warn("[api.AddUser] GetUserWithCache db error")
 		ctx.JSON(400, gin.H{
 			"errMsg": "db error",
 		})
@@ -40,7 +43,10 @@ func AddUser(ctx *gin.Context) {
 
 	err = models.AddUser(req.Username, req.Password, req.Kind)
 	if err != nil {
-		logrus.Errorf("[api.AddUser] models.AddUser db error, username: %v, err: %v", req.Username, err)
+		logrus.WithFields(logrus.Fields{
+			"username": req.Username,
+			"err":      err,
+		}).Warn("[api.AddUser] models.AddUser db error")
 		ctx.JSON(400, gin.H{
 			"errMsg": "db error",
 		})
@@ -57,7 +63,10 @@ func ExistsUser(ctx *gin.Context) {
 
 	user, err := GetUserWithCache(username)
 	if err != nil {
-		logrus.Infof("[api.ExistsUser] GetUserWithCache db error, username: %v, err: %v", username, err)
+		logrus.WithFields(logrus.Fields{
+			"username": username,
+			"err":      err,
+		}).Warn("[api.ExistsUser] GetUserWithCache db error")
 		ctx.JSON(400, gin.H{
 			"errMsg": "db error",
 		})
