@@ -9,7 +9,7 @@ import (
 type Coupon struct {
 	ID          uint   `gorm:"primary_key" json:"-"`
 	Username    string `gorm:"type:varchar(20)" json:"username"`
-	Coupons     string `gorm:"type:varchar(60)" json:"coupons"`
+	Coupons     string `gorm:"type:varchar(60)" json:"name"`
 	Description string `gorm:"type:varchar(60)" json:"description"`
 	Stock       int    `json:"stock"`
 	Amount      int    `json:"amount"`
@@ -68,7 +68,7 @@ func AssignCoupon(salerName, customerName string, coupon *Coupon) (bool, error) 
 		return false, err
 	}
 
-	query := tx.Exec("UPDATE coupon SET `left`=`left`-1 WHERE `username`=? AND `coupons`=? AND `left`>1", salerName, coupon.Coupons)
+	query := tx.Exec("UPDATE coupon SET `left`=`left`-1 WHERE `username`=? AND `coupons`=? AND `left`>=1", salerName, coupon.Coupons)
 	err := query.Error
 	rowsAffected := query.RowsAffected
 	if err != nil || rowsAffected != 1 {

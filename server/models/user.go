@@ -9,7 +9,7 @@ type User struct {
 	ID       uint   `gorm:"primary_key"`
 	Username string `gorm:"type:varchar(20)" json:"username"`
 	Password string `gorm:"type:varchar(32)" json:"password"`
-	Kind     int    `json:"kind"`
+	Kind     string `json:"kind"` 
 }
 
 func ExistsUsername(username string) (bool, error) {
@@ -24,7 +24,7 @@ func ExistsUsername(username string) (bool, error) {
 	return true, nil
 }
 
-func AddUser(username, password string, kind int) error {
+func AddUser(username, password string, kind string) error {
 	user := User{
 		Username: username,
 		Password: utils.MD5Encode(password),

@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"strconv"
+	"fmt"
 )
 
 type AddCouponsReq struct {
@@ -58,7 +59,7 @@ func AddCoupons(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(200, gin.H{
+	ctx.JSON(201, gin.H{
 		"errMsg": "",
 	})
 }
@@ -83,7 +84,7 @@ func GetCouponsInfo(ctx *gin.Context) {
 
 	tokenUsername, tokenKindStr, err := utils.DecodeToken(ctx.GetHeader("Authorization"))
 	if err != nil {
-		ctx.JSON(400, gin.H{
+		ctx.JSON(401, gin.H{
 			"errMsg": "authorization error",
 		})
 		return
@@ -101,7 +102,19 @@ func GetCouponsInfo(ctx *gin.Context) {
 			ctx.JSON(400, coupons)
 			return
 		}
-		ctx.JSON(200, coupons)
+		fmt.Println(coupons)
+		if coupons == nil || len(coupons) == 0 {
+			fmt.Println("coupons is null")
+			ctx.JSON(204, gin.H{
+				"errMsg": "query null",
+				"data": coupons,
+			})
+			return
+		}
+		ctx.JSON(200, gin.H{
+			"errMsg": "",
+			"data": coupons,
+		})
 		return
 	}
 
@@ -113,9 +126,9 @@ func GetCouponsInfo(ctx *gin.Context) {
 		})
 		return
 	}
-	if user == nil || user.Kind != models.KindSalerInt {
+	if user == nil || user.Kind != models.KindSalerStr {
 		logrus.Infof("[api.GetCouponsInfo] GetUserWithCache user is not a saler, username: %v", username)
-		ctx.JSON(400, gin.H{
+		ctx.JSON(401, gin.H{
 			"errMsg": "user is not a saler",
 		})
 		return
@@ -127,7 +140,20 @@ func GetCouponsInfo(ctx *gin.Context) {
 		ctx.JSON(400, coupons)
 		return
 	}
-	ctx.JSON(200, coupons)
+	// logrus.Infof(coupons)
+	fmt.Println(coupons)
+	if coupons == nil || len(coupons) == 0 {
+		fmt.Println("coupons is null")
+		ctx.JSON(204, gin.H{
+			"errMsg": "query null",
+			"data": coupons,
+		})
+		return
+	}
+	ctx.JSON(200, gin.H{
+		"errMsg": "",
+		"data": coupons,
+	})
 }
 
 func AssignCoupon(ctx *gin.Context) {
@@ -144,7 +170,7 @@ func AssignCoupon(ctx *gin.Context) {
 
 	tokenUsername, _, err := utils.DecodeToken(ctx.GetHeader("Authorization"))
 	if err != nil {
-		ctx.JSON(400, gin.H{
+		ctx.JSON(401, gin.H{
 			"errMsg": "authorization error",
 		})
 		return
@@ -158,9 +184,9 @@ func AssignCoupon(ctx *gin.Context) {
 		})
 		return
 	}
-	if user == nil || user.Kind != models.KindSalerInt {
+	if user == nil || user.Kind != models.KindSalerStr {
 		logrus.Infof("[api.AssignCoupon] GetUserWithCache user is not a saler, salerName: %v", salerName)
-		ctx.JSON(400, gin.H{
+		ctx.JSON(204, gin.H{
 			"errMsg": "user is not a saler",
 		})
 		return
@@ -176,7 +202,7 @@ func AssignCoupon(ctx *gin.Context) {
 	}
 	if coupon != nil {
 		logrus.Infof("[api.AssignCoupon] customer alread have the coupon, customerName: %v, couponName: %v, err: %v", tokenUsername, couponName, err)
-		ctx.JSON(400, gin.H{
+		ctx.JSON(204, gin.H{
 			"errMsg": "user already have this coupon",
 		})
 		return
@@ -192,29 +218,33 @@ func AssignCoupon(ctx *gin.Context) {
 	}
 	if coupon == nil {
 		logrus.Infof("[api.AssignCoupon] coupon not exists, salerName: %v, couponName: %v, err: %v", salerName, couponName, err)
-		ctx.JSON(400, gin.H{
+		ctx.JSON(204, gin.H{
 			"errMsg": "coupon not exists",
 		})
 		return
 	}
 
-	ok, err := models.AssignCoupon(salerName, tokenUsername, coupon)
-	if err != nil {
-		logrus.Infof("[api.AssignCoupon] models.AssignCoupon db error, salerName: %v, customerName: %v, couponName: %v, err: %v",
-			salerName, tokenUsername, couponName, err)
-		ctx.JSON(400, gin.H{
-			"errMsg": "assign db error",
-		})
-		return
-	}
-	if !ok {
-		ctx.JSON(200, gin.H{
-			"errMsg": "no coupons left",
-		})
-		return
-	}
 
-	ctx.JSON(200, gin.H{
+
+	// ok, err := models.AssignCoupon(salerName, tokenUsername, coupon)
+	subscribeAssignCoupon := &(models.SubscribeAssignCoupon{SalerName: salerName, TokenUsername: tokenUsername, CouponData: *coupon})
+	models.NatsEncodedConn.Publish(models.AssignCoupon_Subj, subscribeAssignCoupon)
+	// if err != nil {
+	// 	logrus.Infof("[api.AssignCoupon] models.AssignCoupon db error, salerName: %v, customerName: %v, couponName: %v, err: %v",
+	// 		salerName, tokenUsername, couponName, err)
+	// 	ctx.JSON(400, gin.H{
+	// 		"errMsg": "assign db error",
+	// 	})
+	// 	return
+	// }
+	// if !ok {
+	// 	ctx.JSON(200, gin.H{
+	// 		"errMsg": "no coupons left",
+	// 	})
+	// 	return
+	// }
+
+	ctx.JSON(201, gin.H{
 		"errMsg": "",
 	})
 }
