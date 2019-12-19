@@ -30,7 +30,7 @@ services:
       - ./mysql/data:/var/lib/mysql
       - ./mysql/my.cnf:/etc/mysql/my.cnf
     environment:
-      MYSQL_ROOT_PASSWORD: coupons
+      MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: coupons
     networks:
       - db_nw
