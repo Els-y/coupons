@@ -29,7 +29,7 @@ func Auth(ctx *gin.Context) {
 
 	user, err := models.GetUserWithPwd(req.Username, req.Password)
 	if gorm.IsRecordNotFoundError(err) {
-		ctx.JSON(400, gin.H{
+		ctx.JSON(401, gin.H{
 			"kind":   "",
 			"errMsg": "username or password wrong",
 		})
@@ -44,7 +44,7 @@ func Auth(ctx *gin.Context) {
 		return
 	}
 
-	kindStr := models.KindInt2Str[user.Kind]
+	kindStr := user.Kind//models.KindInt2Str[user.Kind]
 	token := utils.EncodeToken(user.Username, kindStr)
 	err = redis.Set(redis.GenAuthorizationKey(token), 1)
 	if err != nil {
