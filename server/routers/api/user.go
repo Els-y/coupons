@@ -10,7 +10,7 @@ import (
 type AddUserReq struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
-	Kind     int    `json:"kind"`
+	Kind     string `json:"kind"`
 }
 
 func AddUser(ctx *gin.Context) {
@@ -41,7 +41,8 @@ func AddUser(ctx *gin.Context) {
 		return
 	}
 
-	err = models.AddUser(req.Username, req.Password, req.Kind)
+	kindInt := models.KindStr2Int[req.Kind]
+	err = models.AddUser(req.Username, req.Password, kindInt)
 	if err != nil {
 		logrus.WithError(err).WithFields(logrus.Fields{
 			"username": req.Username,
@@ -52,15 +53,14 @@ func AddUser(ctx *gin.Context) {
 		return
 	}
 
-	kindStr := models.KindInt2Str[req.Kind]
-	err = redis.Set(redis.GenUserKindKey(req.Username), kindStr, 5*60)
+	err = redis.Set(redis.GenUserKindKey(req.Username), req.Kind, 5*60)
 	if err != nil {
 		logrus.WithError(err).Warn("[api.AddUser] redis.Set error")
 	} else {
 		logrus.Info("[api.AddUser] redis.Set success")
 	}
 
-	ctx.JSON(200, gin.H{
+	ctx.JSON(201, gin.H{
 		"errMsg": "",
 	})
 }

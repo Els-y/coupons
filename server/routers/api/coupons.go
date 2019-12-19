@@ -141,6 +141,10 @@ func GetCouponsInfo(ctx *gin.Context) {
 			})
 			return
 		}
+		if len(coupons) == 0 {
+			ctx.JSON(204, gin.H{})
+			return
+		}
 		ctx.JSON(200, gin.H{
 			"errMsg": "",
 			"data":   coupons,
@@ -183,6 +187,10 @@ func GetCouponsInfo(ctx *gin.Context) {
 			"errMsg": "db error",
 			"data":   coupons,
 		})
+		return
+	}
+	if len(coupons) == 0 {
+		ctx.JSON(204, gin.H{})
 		return
 	}
 	ctx.JSON(200, gin.H{

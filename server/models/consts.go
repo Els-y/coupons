@@ -11,3 +11,8 @@ var KindInt2Str = map[int]string{
 	KindCustomerInt: KindCustomerStr,
 	KindSalerInt:    KindSalerStr,
 }
+
+var KindStr2Int = map[string]int{
+	KindCustomerStr: KindCustomerInt,
+	KindSalerStr:    KindSalerInt,
+}
