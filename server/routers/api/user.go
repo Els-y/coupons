@@ -18,13 +18,23 @@ func AddUser(ctx *gin.Context) {
 
 	err := ctx.BindJSON(&req)
 	if err != nil {
+		logrus.Infof("[api.AddUser] ctx.BindJSON error, username: %v, err: %v", req.Username, err.Error())
 		ctx.JSON(400, gin.H{
 			"errMsg": "params error",
 		})
 		return
 	}
 
+	if req.Kind != models.KindCustomerStr && req.Kind != models.KindSalerStr {
+		logrus.Infof("[api.AddUser] kind is not customer or saler : %v", req.Kind)
+		ctx.JSON(400, gin.H{ 
+			"errMsg": "params kind error",
+		})
+		return
+	}
+
 	userKindStr, err := GetUserKindWithCache(req.Username)
+
 	if err != nil {
 		logrus.WithError(err).WithFields(logrus.Fields{
 			"username": req.Username,
@@ -34,6 +44,7 @@ func AddUser(ctx *gin.Context) {
 		})
 		return
 	}
+
 	if userKindStr != "" {
 		ctx.JSON(400, gin.H{
 			"errMsg": "username exists",
@@ -41,8 +52,7 @@ func AddUser(ctx *gin.Context) {
 		return
 	}
 
-	kindInt := models.KindStr2Int[req.Kind]
-	err = models.AddUser(req.Username, req.Password, kindInt)
+	err = models.AddUser(req.Username, req.Password, req.Kind)
 	if err != nil {
 		logrus.WithError(err).WithFields(logrus.Fields{
 			"username": req.Username,

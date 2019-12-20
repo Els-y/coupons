@@ -6,6 +6,7 @@ import (
 	"github.com/Els-y/coupons/server/pkgs/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	"github.com/nats-io/nats.go"
 	"strconv"
 )
 
@@ -15,6 +16,28 @@ type AddCouponsReq struct {
 	Stock       int    `json:"stock"`
 	Amount      int    `json:"amount"`
 }
+
+type SubscribeAssignCoupon struct {
+	SalerName string
+	TokenUsername string
+	CouponName string
+	CouponStock int
+}
+
+func init() {
+	models.Nc, models.Nat_err = nats.Connect(models.NatsUrl)
+	if models.Nat_err != nil {
+		logrus.Infof("[queue.init] subscribe nats.Connect url error, url: %v, err: %v", models.NatsUrl, models.Nat_err.Error())
+		return
+	}
+
+	models.NatsEncodedConn, models.Nat_err = nats.NewEncodedConn(models.Nc, nats.JSON_ENCODER)
+	if models.Nat_err != nil {
+		logrus.Infof("[queue.init] subscribe nats.NewEncodedConn error, err: %v", models.Nat_err.Error())
+		return
+	}
+}
+
 
 func AddCoupons(ctx *gin.Context) {
 	var req AddCouponsReq
@@ -137,17 +160,20 @@ func GetCouponsInfo(ctx *gin.Context) {
 			}).Warn("[api.GetCouponsInfo] models.GetCouponsWithPage db error")
 			ctx.JSON(400, gin.H{
 				"errMsg": "",
-				"data":   coupons,
+				"data":   []models.Coupon{},
 			})
 			return
 		}
-		if len(coupons) == 0 {
-			ctx.JSON(204, gin.H{})
+		if coupons == nil || len(coupons) == 0 {
+			ctx.JSON(204, gin.H{
+				"errMsg": "query null",
+				"data": []models.Coupon{},
+			})
 			return
 		}
 		ctx.JSON(200, gin.H{
 			"errMsg": "",
-			"data":   coupons,
+			"data": coupons,
 		})
 		return
 	}
@@ -164,6 +190,7 @@ func GetCouponsInfo(ctx *gin.Context) {
 		})
 		return
 	}
+
 	if userKindStr != models.KindSalerStr {
 		logrus.WithFields(logrus.Fields{
 			"username": username,
@@ -185,17 +212,20 @@ func GetCouponsInfo(ctx *gin.Context) {
 		}).Warn("[api.GetCouponsInfo] models.GetCouponsWithPage db error")
 		ctx.JSON(400, gin.H{
 			"errMsg": "db error",
-			"data":   coupons,
+			"data":   []models.Coupon{},
 		})
 		return
 	}
-	if len(coupons) == 0 {
-		ctx.JSON(204, gin.H{})
+	if coupons == nil || len(coupons) == 0 {
+		ctx.JSON(204, gin.H{
+			"errMsg": "query null",
+			"data": []models.Coupon{},
+		})
 		return
 	}
 	ctx.JSON(200, gin.H{
 		"errMsg": "",
-		"data":   coupons,
+		"data": coupons,
 	})
 }
 
@@ -241,7 +271,7 @@ func AssignCoupon(ctx *gin.Context) {
 		return
 	}
 
-	exist, err := CheckIfUserHasCoupon(tokenUsername, couponName)
+	exist, couponStock, err := CheckIfUserHasCoupon(tokenUsername, couponName)
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
 			"customer": tokenUsername,
@@ -264,7 +294,7 @@ func AssignCoupon(ctx *gin.Context) {
 		return
 	}
 
-	exist, err = CheckIfUserHasCoupon(salerName, couponName)
+	exist, couponStock, err = CheckIfUserHasCoupon(salerName, couponName)
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
 			"saler":  salerName,
@@ -318,6 +348,8 @@ func AssignCoupon(ctx *gin.Context) {
 	}
 
 	// push msg to mq
+	subscribeAssignCoupon := &(SubscribeAssignCoupon{SalerName: salerName, TokenUsername: tokenUsername, CouponName: couponName, CouponStock: couponStock})
+	models.NatsEncodedConn.Publish(models.AssignCoupon_Subj, subscribeAssignCoupon)
 
 	ctx.JSON(201, gin.H{
 		"errMsg": "",
