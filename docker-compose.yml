@@ -60,23 +60,23 @@ services:
     networks:
       - db_nw
 
-  subscriber1:
-    build: 
-      context: ./subscriber
-    restart: always
-    depends_on:
-      - mysql
-    networks:
-      - db_nw
+  # subscriber1:
+  #   build: 
+  #     context: ./subscriber
+  #   restart: always
+  #   depends_on:
+  #     - mysql
+  #   networks:
+  #     - db_nw
 
-  subscriber2:
-    build: 
-      context: ./subscriber
-    restart: always
-    depends_on:
-      - mysql
-    networks:
-      - db_nw
+  # subscriber2:
+  #   build: 
+  #     context: ./subscriber
+  #   restart: always
+  #   depends_on:
+  #     - mysql
+  #   networks:
+  #     - db_nw
 
 networks:
   db_nw:
