@@ -14,106 +14,105 @@
 package main
 
 import (
-	"flag"
 	"log"
-	"os"
-	"os/signal"
 	"time"
-	"strings"
 	"github.com/Els-y/coupons/subscriber/models"
 	"github.com/Els-y/coupons/subscriber/pkgs/setting"
-	
 	"github.com/nats-io/nats.go"
+	"github.com/sirupsen/logrus"
 )
 
-// NOTE: Can test with demo servers.
-// nats-qsub -s demo.nats.io <subject> <queue>
-// nats-qsub -s demo.nats.io:4443 <subject> <queue> (TLS version)
-
-func usage() {
-	log.Printf("Usage: nats-qsub [-s server] [-creds file] [-t] <subject> <queue>\n")
-	flag.PrintDefaults()
-}
-
-func showUsageAndExit(exitcode int) {
-	usage()
-	os.Exit(exitcode)
-}
-
-func printMsg(m *nats.Msg, i int) {
-	log.Printf("[#%d] Received on [%s] Queue[%s] Pid[%d]: '%s'", i, m.Subject, m.Sub.Queue, os.Getpid(), string(m.Data))
+type SubscribeAssignCoupon struct {
+	SalerName string
+	TokenUsername string
+	CouponName string
+	CouponStock int
 }
 
 func init() {
 	setting.Setup()
-	models.Setup()
+	models.Setup() 
 }
 
 func main() {
-	var urls = "nats:4222"
-	var subj = "temp"
-	var queue = "my-queue"
+	// var urls = "nats:4222"
+	// var subj = "temp"
+	// var queue = "my-queue"
 	
 	// Connect Options.
 	opts := []nats.Option{nats.Name("NATS Sample Queue Subscriber")}
 	opts = setupConnOptions(opts)
 
-
 	// Connect to NATS
-	nc, err := nats.Connect(urls, opts...)
-	if err != nil {
-		log.Fatal(err)
+	nc, nat_err := nats.Connect(models.NatsUrl, opts...)
+	if nat_err != nil {
+		logrus.Infof("[subscribe] subscribe nats.Connect url error, url: %v, err: %v", models.NatsUrl, nat_err.Error())
+		return 
 	}
 
-	i := 0
+	NatsEncodedConn, nat_err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
+	if nat_err != nil {
+		logrus.Infof("[subscribe] subscribe nats.NewEncodedConn error, err: %v", nat_err.Error())
+		return
+	}
 
-	nc.QueueSubscribe(subj, queue, func(msg *nats.Msg) {
-		var cur_msg string
-		cur_msg = string(msg.Data)
-		infors := strings.Split(cur_msg, ".")
-		log.Printf("%s", cur_msg)
-		switch infors[2] {
-			case "decre":
-				isSuccess, err := models.DecreaseAmount(infors[0], infors[1])
-				_, err2 := models.GetCoupon(infors[0], infors[1])
-				if err == nil{
-					if err2 == nil {
-						// log.Printf("%d", query_coupon.Left)
-						log.Printf("good!")
-					} else {
-						log.Printf("query coupon wrong! %d", isSuccess)
-					}
-					
-				}
-			case "check":
-				log.Printf("Check is unfinished")
-			default:
-				log.Printf("wrong")
-		}
-		// models.db.save(&coupon)
-		
-		log.Printf("%s", infors[0])
+	// i := 0
 
-		i += 1
-		printMsg(msg, i)
+	logrus.Infof("[subscribe] subscribe worker subj: %v, queue: %v", models.AssignCoupon_Subj, models.AssignCoupon_Subj + "_queue")
+	NatsEncodedConn.QueueSubscribe(models.AssignCoupon_Subj, models.AssignCoupon_Subj + "_queue", func(s *SubscribeAssignCoupon) {
+		logrus.Infof("[queue subscribe] recieve publish subj: %v, queue: %v, info: %+v", models.AssignCoupon_Subj, models.AssignCoupon_Subj + "_queue", s)
+		models.AssignCoupon(s.SalerName, s.TokenUsername, s.CouponName, s.CouponStock)
 	})
-	nc.Flush()
 
-	if err := nc.LastError(); err != nil {
-		log.Fatal(err)
-	}
+	select{}
 
-	log.Printf("Listening on [%s]", subj)
+	// nc.QueueSubscribe(subj, queue, func(msg *nats.Msg) {
+	// 	var cur_msg string
+	// 	cur_msg = string(msg.Data)
+	// 	infors := strings.Split(cur_msg, ".")
+	// 	log.Printf("%s", cur_msg)
+	// 	switch infors[2] {
+	// 		case "decre":
+	// 			isSuccess, err := models.DecreaseAmount(infors[0], infors[1])
+	// 			_, err2 := models.GetCoupon(infors[0], infors[1])
+	// 			if err == nil{
+	// 				if err2 == nil {
+	// 					// log.Printf("%d", query_coupon.Left)
+	// 					log.Printf("good!")
+	// 				} else {
+	// 					log.Printf("query coupon wrong! %d", isSuccess)
+	// 				}
+					
+	// 			}
+	// 		case "check":
+	// 			log.Printf("Check is unfinished")
+	// 		default:
+	// 			log.Printf("wrong")
+	// 	}
+	// 	// models.db.save(&coupon)
+		
+	// 	log.Printf("%s", infors[0])
 
-	// Setup the interrupt handler to drain so we don't miss
-	// requests when scaling down.
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	<-c
-	log.Println()
-	log.Printf("Draining...")
-	nc.Drain()
-	log.Fatalf("Exiting")
+	// 	i += 1
+	// 	printMsg(msg, i)
+	// })
+	// nc.Flush()
+
+	// if err := nc.LastError(); err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	// log.Printf("Listening on [%s]", subj)
+
+	// // Setup the interrupt handler to drain so we don't miss
+	// // requests when scaling down.
+	// c := make(chan os.Signal, 1)
+	// signal.Notify(c, os.Interrupt)
+	// <-c
+	// log.Println()
+	// log.Printf("Draining...")
+	// nc.Drain()
+	// log.Fatalf("Exiting")
 }
 
 func setupConnOptions(opts []nats.Option) []nats.Option {

@@ -52,7 +52,7 @@ services:
       - db_nw
 
   subscriber:
-    build:
+    build: 
       context: ./subscriber
     restart: always
     depends_on:
@@ -61,7 +61,7 @@ services:
       - db_nw
 
   subscriber1:
-    build:
+    build: 
       context: ./subscriber
     restart: always
     depends_on:
@@ -70,7 +70,7 @@ services:
       - db_nw
 
   subscriber2:
-    build:
+    build: 
       context: ./subscriber
     restart: always
     depends_on:
