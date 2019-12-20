@@ -124,9 +124,9 @@ func CheckIfUserHasCoupon(username, couponName string) (bool, int, error) {
 			}
 			err = redis.Set(keyCoupon, coupon, 5*60)
 			if err != nil {
-				logger.WithError(err).Warn("[utils.CheckIfUserHasCoupon] redis.SAdd error")
+				logger.WithError(err).Warn("[utils.CheckIfUserHasCoupon] redis.Set coupon error")
 			} else {
-				logger.Info("[utils.CheckIfUserHasCoupon] redis.SAdd success")
+				logger.Info("[utils.CheckIfUserHasCoupon] redis.Set coupon success")
 			}
 			return true, coupon.Stock, nil
 		}
@@ -142,12 +142,18 @@ func CheckIfUserHasCoupon(username, couponName string) (bool, int, error) {
 		return false, 0, err
 	}
 
-	// _, err = redis.SAdd(key, username)
-	err = redis.Set(key, coupon, 5*60)
+	_, err = redis.SAdd(key, username)
 	if err != nil {
 		logger.WithError(err).Warn("[utils.CheckIfUserHasCoupon] redis.SAdd error")
 	} else {
 		logger.Info("[utils.CheckIfUserHasCoupon] redis.SAdd success")
+	}
+
+	err = redis.Set(keyCoupon, coupon, 5*60)
+	if err != nil {
+		logger.WithError(err).Warn("[utils.CheckIfUserHasCoupon] redis.Set coupon error")
+	} else {
+		logger.Info("[utils.CheckIfUserHasCoupon] redis.Set coupon success")
 	}
 
 	return true, coupon.Stock ,nil
