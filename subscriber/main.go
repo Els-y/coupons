@@ -50,62 +50,43 @@ func init() {
 }
 
 func main() {
-	var urls = flag.String("s", "nats:4222", "The nats server URLs (separated by comma)")
-	var userCreds = flag.String("creds", "", "User Credentials File")
-	var showTime = flag.Bool("t", false, "Display timestamps")
-	var showHelp = flag.Bool("h", false, "Show help message")
-
-	log.SetFlags(0)
-	flag.Usage = usage
-	flag.Parse()
-
-	if *showHelp {
-		showUsageAndExit(0)
-	}
-
-	args := flag.Args()
-	if len(args) != 2 {
-		showUsageAndExit(1)
-	}
-
+	var urls = "nats:4222"
+	var subj = "temp"
+	var queue = "my-queue"
+	
 	// Connect Options.
 	opts := []nats.Option{nats.Name("NATS Sample Queue Subscriber")}
 	opts = setupConnOptions(opts)
 
-	// Use UserCredentials
-	if *userCreds != "" {
-		opts = append(opts, nats.UserCredentials(*userCreds))
-	}
-
 	// Connect to NATS
-	nc, err := nats.Connect(*urls, opts...)
+	nc, err := nats.Connect(urls, opts...)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	subj, queue, i := args[0], args[1], 0
+	i := 0
 
 	nc.QueueSubscribe(subj, queue, func(msg *nats.Msg) {
 		var cur_msg string
-		var num int
 		cur_msg = string(msg.Data)
 		infors := strings.Split(cur_msg, ".")
-		
+		log.Printf("%s", cur_msg)
 		switch infors[2] {
 			case "decre":
-				isSuccess, number, err := models.DecreaseAmount(infors[0], infors[1])
-				num = number
+				isSuccess, err := models.DecreaseAmount(infors[0], infors[1])
+				_, err2 := models.GetCoupon(infors[0], infors[1])
 				if err == nil{
-					log.Printf("%d", isSuccess)
+					if err2 == nil {
+						// log.Printf("%d", query_coupon.Left)
+						log.Printf("good!")
+					} else {
+						log.Printf("query coupon wrong! %d", isSuccess)
+					}
+					
 				}
 			case "check":
-				num = -1111
-				// num, err := strconv.Atoi(infors[3])
-				// if err != nil {
-				// 	log.Printf("String2int: Error!")
-				// }
+				log.Printf("Check is unfinished")
 			default:
-				num = -1111
 				log.Printf("wrong")
 		}
 		// models.db.save(&coupon)
@@ -113,7 +94,7 @@ func main() {
 		log.Printf("%s", infors[0])
 
 		i += 1
-		printMsg(msg, num)
+		printMsg(msg, i)
 	})
 	nc.Flush()
 
@@ -122,9 +103,6 @@ func main() {
 	}
 
 	log.Printf("Listening on [%s]", subj)
-	if *showTime {
-		log.SetFlags(log.LstdFlags)
-	}
 
 	// Setup the interrupt handler to drain so we don't miss
 	// requests when scaling down.

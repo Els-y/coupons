@@ -20,7 +20,7 @@ func Auth(ctx *gin.Context) {
 	ctx.Header("Authorization", "")
 
 	if err != nil {
-		ctx.JSON(400, gin.H{
+		ctx.JSON(401, gin.H{
 			"kind":   "",
 			"errMsg": "params error",
 		})
@@ -29,15 +29,18 @@ func Auth(ctx *gin.Context) {
 
 	user, err := models.GetUserWithPwd(req.Username, req.Password)
 	if gorm.IsRecordNotFoundError(err) {
-		ctx.JSON(400, gin.H{
+		ctx.JSON(401, gin.H{
 			"kind":   "",
 			"errMsg": "username or password wrong",
 		})
 		return
 	}
 	if err != nil {
-		logrus.Infof("[api.Auth] models.GetUserWithPwd db error, username: %v, err: %+v", req.Username, err)
-		ctx.JSON(400, gin.H{
+		logrus.WithFields(logrus.Fields{
+			"username": req.Username,
+			"err":      err,
+		}).Warn("[api.Auth] models.GetUserWithPwd db error")
+		ctx.JSON(401, gin.H{
 			"kind":   "",
 			"errMsg": "db error",
 		})
@@ -46,10 +49,13 @@ func Auth(ctx *gin.Context) {
 
 	kindStr := models.KindInt2Str[user.Kind]
 	token := utils.EncodeToken(user.Username, kindStr)
-	err = redis.Set(redis.GenAuthorizationKey(token), 1)
+	err = redis.Set(redis.GenAuthorizationKey(token), 1, -1)
 	if err != nil {
-		logrus.Infof("[api.Auth] redis error, username: %v", req.Username)
-		ctx.JSON(400, gin.H{
+		logrus.WithFields(logrus.Fields{
+			"username": req.Username,
+			"err":      err,
+		}).Warn("[api.Auth] redis error")
+		ctx.JSON(401, gin.H{
 			"kind":   "",
 			"errMsg": "redis error",
 		})

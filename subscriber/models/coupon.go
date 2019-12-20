@@ -16,16 +16,10 @@ type Coupon struct {
 	Left        int    `json:"left"`
 }
 
-func DecreaseAmount(username, name string) (bool, int, error) {
-	var coupon Coupon
-	err := db.Where(&Coupon{Username: username, Coupons: name}).First(&coupon).Error
-	coupon.Amount = coupon.Amount - 1
-	coupon.Left = coupon.Left - 1
-	if err != nil {
-		return false, coupon.Amount, err
-	}
-	final_err := db.Save(&coupon).Error
-	return final_err==nil, coupon.Amount, final_err
+func DecreaseAmount(username, name string) (bool, error) {
+	query := db.Exec("UPDATE coupon SET `left`=`left`-1 WHERE `username`=? AND `coupons`=? AND `left`>0", username, name)
+	err := query.Error
+	return err==nil, err
 }
 
 func CheckAmount(username, name string, num int) (bool, error) {
@@ -90,7 +84,7 @@ func AssignCoupon(salerName, customerName string, coupon *Coupon) (bool, error) 
 		return false, err
 	}
 
-	query := tx.Exec("UPDATE coupon SET `left`=`left`-1 WHERE `username`=? AND `coupons`=? AND `left`>1", salerName, coupon.Coupons)
+	query := tx.Exec("UPDATE coupon SET `left`=`left`-1 WHERE `username`=? AND `coupons`=? AND `left`>0", salerName, coupon.Coupons)
 	err := query.Error
 	rowsAffected := query.RowsAffected
 	if err != nil || rowsAffected != 1 {

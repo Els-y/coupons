@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/Els-y/coupons/server/models"
+	"github.com/Els-y/coupons/server/pkgs/redis"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
@@ -9,7 +10,7 @@ import (
 type AddUserReq struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
-	Kind     int    `json:"kind"`
+	Kind     string `json:"kind"`
 }
 
 func AddUser(ctx *gin.Context) {
@@ -23,31 +24,43 @@ func AddUser(ctx *gin.Context) {
 		return
 	}
 
-	user, err := GetUserWithCache(req.Username)
+	userKindStr, err := GetUserKindWithCache(req.Username)
 	if err != nil {
-		logrus.Infof("[api.AddUser] GetUserWithCache db error, username: %v, err: %v", req.Username, err.Error())
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"username": req.Username,
+		}).Warn("[api.AddUser] GetUserKindWithCache db error")
 		ctx.JSON(400, gin.H{
 			"errMsg": "db error",
 		})
 		return
 	}
-	if user != nil {
+	if userKindStr != "" {
 		ctx.JSON(400, gin.H{
 			"errMsg": "username exists",
 		})
 		return
 	}
 
-	err = models.AddUser(req.Username, req.Password, req.Kind)
+	kindInt := models.KindStr2Int[req.Kind]
+	err = models.AddUser(req.Username, req.Password, kindInt)
 	if err != nil {
-		logrus.Errorf("[api.AddUser] models.AddUser db error, username: %v, err: %v", req.Username, err)
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"username": req.Username,
+		}).Warn("[api.AddUser] models.AddUser db error")
 		ctx.JSON(400, gin.H{
 			"errMsg": "db error",
 		})
 		return
 	}
 
-	ctx.JSON(200, gin.H{
+	err = redis.Set(redis.GenUserKindKey(req.Username), req.Kind, 5*60)
+	if err != nil {
+		logrus.WithError(err).Warn("[api.AddUser] redis.Set error")
+	} else {
+		logrus.Info("[api.AddUser] redis.Set success")
+	}
+
+	ctx.JSON(201, gin.H{
 		"errMsg": "",
 	})
 }
@@ -57,7 +70,10 @@ func ExistsUser(ctx *gin.Context) {
 
 	user, err := GetUserWithCache(username)
 	if err != nil {
-		logrus.Infof("[api.ExistsUser] GetUserWithCache db error, username: %v, err: %v", username, err)
+		logrus.WithFields(logrus.Fields{
+			"username": username,
+			"err":      err,
+		}).Warn("[api.ExistsUser] GetUserWithCache db error")
 		ctx.JSON(400, gin.H{
 			"errMsg": "db error",
 		})
