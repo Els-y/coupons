@@ -7,3 +7,5 @@ COPY . .
 RUN GOPROXY=https://goproxy.io go build -v
 
 CMD ["/server/server"]
+
+EXPOSE 20080

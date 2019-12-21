@@ -10,11 +10,21 @@ services:
     ports:
       - '20080:80'
     depends_on:
-      - server
+      - server1
+      - server2
     networks:
       - db_nw
 
-  server:
+  server1:
+    build: ./server
+    restart: always
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - db_nw
+
+  server2:
     build: ./server
     restart: always
     depends_on:
@@ -51,8 +61,8 @@ services:
     networks:
       - db_nw
 
-  subscriber:
-    build: 
+  subscriber1:
+    build:
       context: ./subscriber
     restart: always
     depends_on:
@@ -60,23 +70,14 @@ services:
     networks:
       - db_nw
 
-  # subscriber1:
-  #   build: 
-  #     context: ./subscriber
-  #   restart: always
-  #   depends_on:
-  #     - mysql
-  #   networks:
-  #     - db_nw
-
-  # subscriber2:
-  #   build: 
-  #     context: ./subscriber
-  #   restart: always
-  #   depends_on:
-  #     - mysql
-  #   networks:
-  #     - db_nw
+  subscriber2:
+    build:
+      context: ./subscriber
+    restart: always
+    depends_on:
+      - mysql
+    networks:
+      - db_nw
 
 networks:
   db_nw:
