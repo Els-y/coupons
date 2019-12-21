@@ -22,14 +22,10 @@ func GetCoupon(username, name string) (*Coupon, error) {
 	return &coupon, err
 }
 
-func GetCouponsWithPage(username string, isSaler bool, page int) ([]Coupon, error) {
+func GetCouponsWithPage(username string, page int) ([]Coupon, error) {
 	var coupons = make([]Coupon, setting.AppSetting.PageSize)
-	query := db.Where(&Coupon{Username: username})
-	if isSaler {
-		query = query.Where("`left` > 0")
-	}
-
-	err := query.Offset(setting.AppSetting.PageSize * (page - 1)).Limit(setting.AppSetting.PageSize).Find(&coupons).Error
+	err := db.Where(&Coupon{Username: username}).Where("`left` > 0").
+		Offset(setting.AppSetting.PageSize * (page - 1)).Limit(setting.AppSetting.PageSize).Find(&coupons).Error
 	return coupons, err
 }
 

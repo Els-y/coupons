@@ -19,6 +19,9 @@ func init() {
 
 func main() {
 	gin.SetMode(setting.ServerSetting.RunMode)
+	if setting.ServerSetting.RunMode == "release" {
+		logrus.SetLevel(logrus.WarnLevel)
+	}
 
 	routersInit := routers.InitRouter()
 	readTimeout := setting.ServerSetting.ReadTimeout

@@ -125,7 +125,7 @@ func GetCouponsInfo(ctx *gin.Context) {
 		return
 	}
 
-	tokenUsername, tokenKindStr, err := utils.DecodeToken(ctx.GetHeader("Authorization"))
+	tokenUsername, _, err := utils.DecodeToken(ctx.GetHeader("Authorization"))
 	if err != nil {
 		ctx.JSON(401, gin.H{
 			"errMsg": "authorization error",
@@ -152,36 +152,7 @@ func GetCouponsInfo(ctx *gin.Context) {
 		return
 	}
 
-	var coupons []models.Coupon
-	if username == tokenUsername {
-		if tokenKindStr == models.KindCustomerStr {
-			coupons, err = models.GetCouponsWithPage(username, false, page)
-		} else {
-			coupons, err = models.GetCouponsWithPage(username, true, page)
-		}
-		if err != nil {
-			logger.WithError(err).Warn("models.GetCouponsWithPage db error")
-			ctx.JSON(400, gin.H{
-				"errMsg": "",
-				"data":   []models.Coupon{},
-			})
-			return
-		}
-		if coupons == nil || len(coupons) == 0 {
-			ctx.JSON(204, gin.H{
-				"errMsg": "query null",
-				"data":   []models.Coupon{},
-			})
-			return
-		}
-		ctx.JSON(200, gin.H{
-			"errMsg": "",
-			"data":   coupons,
-		})
-		return
-	}
-
-	if user.Kind != models.KindSalerStr {
+	if username != tokenUsername && user.Kind != models.KindSalerStr {
 		ctx.JSON(401, gin.H{
 			"errMsg": "user is not a saler",
 			"data":   []models.Coupon{},
@@ -189,9 +160,9 @@ func GetCouponsInfo(ctx *gin.Context) {
 		return
 	}
 
-	coupons, err = models.GetCouponsWithPage(username, true, page)
+	coupons, err := GetPageCouponsWithCache(username, page)
 	if err != nil {
-		logger.WithError(err).Warn("models.GetCouponsWithPage db error")
+		logger.WithError(err).Warn("GetPageCouponsWithCache db error")
 		ctx.JSON(400, gin.H{
 			"errMsg": "db error",
 			"data":   []models.Coupon{},

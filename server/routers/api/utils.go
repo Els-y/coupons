@@ -159,3 +159,40 @@ func CheckIfUserHasCoupon(username, couponOwnerName, couponName string) (bool, e
 
 	return true, nil
 }
+
+func GetPageCouponsWithCache(username string, page int) ([]models.Coupon, error) {
+	logger := logrus.WithFields(logrus.Fields{"username": username, "page": page})
+	key := redis.GenPageCouponsKey(username, page)
+	pageCouponsBytes, err := redis.Get(key)
+	if err == nil {
+		coupon, err := PageCouponsBytesToStruct(pageCouponsBytes)
+		if err == nil {
+			logger.Info("page coupons exists in redis")
+			return coupon, nil
+		}
+	}
+
+	coupons, err := models.GetCouponsWithPage(username, page)
+	if err != nil {
+		logger.WithError(err).Warn("models.GetCouponsWithPage db error")
+		return nil, err
+	}
+
+	err = redis.Set(key, coupons, 30)
+	if err != nil {
+		logger.WithError(err).Warn("cache coupons fail")
+	} else {
+		logger.Info("cache coupons success")
+	}
+
+	return coupons, nil
+}
+
+func PageCouponsBytesToStruct(pageCouponsBytes []byte) ([]models.Coupon, error) {
+	var coupons []models.Coupon
+	err := json.Unmarshal(pageCouponsBytes, &coupons)
+	if err != nil {
+		return nil, err
+	}
+	return coupons, nil
+}
