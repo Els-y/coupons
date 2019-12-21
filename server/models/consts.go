@@ -5,12 +5,12 @@ import (
 )
 
 const (
-	KindCustomerInt = 0
-	KindSalerInt    = 1
-	KindCustomerStr = "customer"
-	KindSalerStr    = "saler"
-	NatsUrl = "nats:4222"
-	AssignCoupon_Subj = "AssignCounpon"
+	KindCustomerInt            = 0
+	KindSalerInt               = 1
+	KindCustomerStr            = "customer"
+	KindSalerStr               = "saler"
+	NatsUrl                    = "nats:4222"
+	AssignCoupon_Subj          = "AssignCounpon"
 	AssignCounpon_SubscribeNum = 4
 )
 

@@ -131,7 +131,7 @@ func CheckIfUserHasCoupon(username, couponName string) (bool, int, error) {
 			return true, coupon.Stock, nil
 		}
 	}
-	
+
 	coupon, err = models.GetCoupon(username, couponName)
 	if gorm.IsRecordNotFoundError(err) {
 		logger.Info("[utils.CheckIfUserHasCoupon] models.GetCoupon coupon not exists")
@@ -156,7 +156,7 @@ func CheckIfUserHasCoupon(username, couponName string) (bool, int, error) {
 		logger.Info("[utils.CheckIfUserHasCoupon] redis.Set coupon success")
 	}
 
-	return true, coupon.Stock ,nil
+	return true, coupon.Stock, nil
 }
 
 func GetUserKindWithCache(username string) (string, error) {
@@ -181,7 +181,7 @@ func GetUserKindWithCache(username string) (string, error) {
 		return "", err
 	}
 
-	kindStr := user.Kind//models.KindInt2Str[user.Kind]
+	kindStr := user.Kind
 	err = redis.Set(key, kindStr, 5*60)
 	if err != nil {
 		logger.WithError(err).Warn("redis.Set error")

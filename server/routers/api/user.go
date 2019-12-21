@@ -27,7 +27,7 @@ func AddUser(ctx *gin.Context) {
 
 	if req.Kind != models.KindCustomerStr && req.Kind != models.KindSalerStr {
 		logrus.Infof("[api.AddUser] kind is not customer or saler : %v", req.Kind)
-		ctx.JSON(400, gin.H{ 
+		ctx.JSON(400, gin.H{
 			"errMsg": "params kind error",
 		})
 		return

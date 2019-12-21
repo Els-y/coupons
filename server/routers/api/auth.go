@@ -47,7 +47,7 @@ func Auth(ctx *gin.Context) {
 		return
 	}
 
-	kindStr := user.Kind//models.KindInt2Str[user.Kind]
+	kindStr := user.Kind
 	token := utils.EncodeToken(user.Username, kindStr)
 	err = redis.Set(redis.GenAuthorizationKey(token), 1, -1)
 	if err != nil {

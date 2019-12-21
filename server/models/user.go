@@ -9,7 +9,7 @@ type User struct {
 	ID       uint   `gorm:"primary_key"`
 	Username string `gorm:"type:varchar(20)" json:"username"`
 	Password string `gorm:"type:varchar(32)" json:"password"`
-	Kind     string `json:"kind"` 
+	Kind     string `json:"kind"`
 }
 
 func ExistsUsername(username string) (bool, error) {

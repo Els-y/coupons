@@ -5,8 +5,8 @@ import (
 	"github.com/Els-y/coupons/server/pkgs/redis"
 	"github.com/Els-y/coupons/server/pkgs/utils"
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 	"github.com/nats-io/nats.go"
+	"github.com/sirupsen/logrus"
 	"strconv"
 )
 
@@ -18,10 +18,10 @@ type AddCouponsReq struct {
 }
 
 type SubscribeAssignCoupon struct {
-	SalerName string
+	SalerName     string
 	TokenUsername string
-	CouponName string
-	CouponStock int
+	CouponName    string
+	CouponStock   int
 }
 
 func init() {
@@ -37,7 +37,6 @@ func init() {
 		return
 	}
 }
-
 
 func AddCoupons(ctx *gin.Context) {
 	var req AddCouponsReq
@@ -167,13 +166,13 @@ func GetCouponsInfo(ctx *gin.Context) {
 		if coupons == nil || len(coupons) == 0 {
 			ctx.JSON(204, gin.H{
 				"errMsg": "query null",
-				"data": []models.Coupon{},
+				"data":   []models.Coupon{},
 			})
 			return
 		}
 		ctx.JSON(200, gin.H{
 			"errMsg": "",
-			"data": coupons,
+			"data":   coupons,
 		})
 		return
 	}
@@ -219,13 +218,13 @@ func GetCouponsInfo(ctx *gin.Context) {
 	if coupons == nil || len(coupons) == 0 {
 		ctx.JSON(204, gin.H{
 			"errMsg": "query null",
-			"data": []models.Coupon{},
+			"data":   []models.Coupon{},
 		})
 		return
 	}
 	ctx.JSON(200, gin.H{
 		"errMsg": "",
-		"data": coupons,
+		"data":   coupons,
 	})
 }
 
