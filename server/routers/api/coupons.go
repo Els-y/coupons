@@ -71,39 +71,29 @@ func AddCoupons(ctx *gin.Context) {
 		return
 	}
 
-	err = models.AddCoupon(username, req.Name, req.Description, req.Stock, req.Amount)
+	logger := logrus.WithFields(logrus.Fields{"func": "api.AddCoupons", "user": username, "coupon": req.Name})
+	coupon, err := models.AddCoupon(username, req.Name, req.Description, req.Stock, req.Amount)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"saler":  username,
-			"coupon": req.Name,
-			"err":    err,
-		}).Warn("[api.AddCoupons] models.AddCoupon db error")
+		logger.WithError(err).Warn("models.AddCoupon db error")
 		ctx.JSON(400, gin.H{
 			"errMsg": "db error",
 		})
 		return
 	}
 
-	ok, err := redis.SAdd(redis.GenCouponOwnersKey(req.Name), username)
+	err = redis.Set(redis.GenCouponKey(username, req.Name), coupon, -1)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"saler":  username,
-			"coupon": req.Name,
-			"ok":     ok,
-			"err":    err,
-		}).Warn("[api.AddCoupons] redis.SAdd error")
-		ctx.JSON(400, gin.H{
-			"errMsg": "redis error",
-		})
+		logger.WithError(err).Warn("cache coupon fail")
+	}
+
+	ok, err := redis.SAdd(redis.GenCouponOwnersKey(username, req.Name), username)
+	if err != nil {
+		logger.WithFields(logrus.Fields{"ok": ok}).WithError(err).Warn("cache coupon owners fail")
 	}
 
 	_, err = redis.IncrBy(redis.GenCouponLeftKey(username, req.Name), req.Amount)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"saler":  username,
-			"coupon": req.Name,
-			"err":    err,
-		}).Warn("[api.AddCoupons] redis set left error")
+		logger.WithError(err).Warn("redis incr left error")
 		ctx.JSON(400, gin.H{
 			"errMsg": "redis error",
 		})
@@ -144,6 +134,24 @@ func GetCouponsInfo(ctx *gin.Context) {
 		return
 	}
 
+	logger := logrus.WithFields(logrus.Fields{"func": "api.GetCouponsInfo", "username": username, "page": page})
+	user, err := GetUserWithCache(username)
+	if err != nil {
+		logger.WithError(err).Warn("GetUserWithCache db error")
+		ctx.JSON(400, gin.H{
+			"errMsg": "db error",
+			"data":   []models.Coupon{},
+		})
+		return
+	}
+	if user == nil {
+		ctx.JSON(204, gin.H{
+			"errMsg": "query null",
+			"data":   []models.Coupon{},
+		})
+		return
+	}
+
 	var coupons []models.Coupon
 	if username == tokenUsername {
 		if tokenKindStr == models.KindCustomerStr {
@@ -152,11 +160,7 @@ func GetCouponsInfo(ctx *gin.Context) {
 			coupons, err = models.GetCouponsWithPage(username, true, page)
 		}
 		if err != nil {
-			logrus.WithFields(logrus.Fields{
-				"username": username,
-				"page":     page,
-				"err":      err,
-			}).Warn("[api.GetCouponsInfo] models.GetCouponsWithPage db error")
+			logger.WithError(err).Warn("models.GetCouponsWithPage db error")
 			ctx.JSON(400, gin.H{
 				"errMsg": "",
 				"data":   []models.Coupon{},
@@ -177,24 +181,7 @@ func GetCouponsInfo(ctx *gin.Context) {
 		return
 	}
 
-	userKindStr, err := GetUserKindWithCache(username)
-	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"username": username,
-			"err":      err,
-		}).Warn("[api.GetCouponsInfo] GetUserKindWithCache db error")
-		ctx.JSON(400, gin.H{
-			"errMsg": "db error",
-			"data":   []models.Coupon{},
-		})
-		return
-	}
-
-	if userKindStr != models.KindSalerStr {
-		logrus.WithFields(logrus.Fields{
-			"username": username,
-			"kind":     userKindStr,
-		}).Info("[api.GetCouponsInfo] GetUserKindWithCache user is not a saler")
+	if user.Kind != models.KindSalerStr {
 		ctx.JSON(401, gin.H{
 			"errMsg": "user is not a saler",
 			"data":   []models.Coupon{},
@@ -204,11 +191,7 @@ func GetCouponsInfo(ctx *gin.Context) {
 
 	coupons, err = models.GetCouponsWithPage(username, true, page)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"username": username,
-			"page":     page,
-			"err":      err,
-		}).Warn("[api.GetCouponsInfo] models.GetCouponsWithPage db error")
+		logger.WithError(err).Warn("models.GetCouponsWithPage db error")
 		ctx.JSON(400, gin.H{
 			"errMsg": "db error",
 			"data":   []models.Coupon{},
@@ -248,68 +231,47 @@ func AssignCoupon(ctx *gin.Context) {
 		return
 	}
 
-	salerKindStr, err := GetUserKindWithCache(salerName)
+	logger := logrus.WithFields(
+		logrus.Fields{"func": "api.AssignCoupon", "saler": salerName, "customer": tokenUsername, "coupon": couponName})
+	saler, err := GetUserWithCache(salerName)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"saler": salerName,
-			"err":   err,
-		}).Warn("[api.AssignCoupon] GetUserKindWithCache db error")
+		logger.WithError(err).Warn("get saler error")
 		ctx.JSON(204, gin.H{
 			"errMsg": "db error",
 		})
 		return
 	}
-	if salerKindStr != models.KindSalerStr {
-		logrus.WithFields(logrus.Fields{
-			"saler": salerName,
-			"kind":  salerKindStr,
-		}).Info("[api.AssignCoupon] GetUserKindWithCache user is not a saler")
+	if saler == nil || saler.Kind != models.KindSalerStr {
 		ctx.JSON(204, gin.H{
 			"errMsg": "user is not a saler",
 		})
 		return
 	}
 
-	exist, couponStock, err := CheckIfUserHasCoupon(tokenUsername, couponName)
+	exist, err := CheckIfUserHasCoupon(tokenUsername, salerName, couponName)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"customer": tokenUsername,
-			"coupon":   couponName,
-			"err":      err,
-		}).Warn("[api.AssignCoupon] CheckIfUserHasCoupon db error")
+		logger.WithError(err).Warn("check whether customer has coupon fail")
 		ctx.JSON(204, gin.H{
 			"errMsg": "db error",
 		})
 		return
 	}
 	if exist == true {
-		logrus.WithFields(logrus.Fields{
-			"customer": tokenUsername,
-			"coupon":   couponName,
-		}).Info("[api.AssignCoupon] customer already has the coupon")
 		ctx.JSON(204, gin.H{
 			"errMsg": "user already have this coupon",
 		})
 		return
 	}
 
-	exist, couponStock, err = CheckIfUserHasCoupon(salerName, couponName)
+	coupon, err := GetCouponWithCache(salerName, couponName)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"saler":  salerName,
-			"coupon": couponName,
-			"err":    err,
-		}).Warn("[api.AssignCoupon] CheckIfUserHasCoupon db error")
+		logger.WithError(err).Warn("get coupon fail")
 		ctx.JSON(204, gin.H{
 			"errMsg": "db error",
 		})
 		return
 	}
-	if exist == false {
-		logrus.WithFields(logrus.Fields{
-			"saler":  salerName,
-			"coupon": couponName,
-		}).Info("[api.AssignCoupon] coupon not exists")
+	if coupon == nil {
 		ctx.JSON(204, gin.H{
 			"errMsg": "coupon not exists",
 		})
@@ -318,12 +280,7 @@ func AssignCoupon(ctx *gin.Context) {
 
 	left, err := redis.Decr(redis.GenCouponLeftKey(salerName, couponName))
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"saler":    salerName,
-			"customer": tokenUsername,
-			"coupon":   couponName,
-			"err":      err,
-		}).Warn("[api.AssignCoupon] redis error")
+		logger.WithError(err).Warn("decr coupon left error")
 		ctx.JSON(204, gin.H{
 			"errMsg": "redis decr fail",
 		})
@@ -337,18 +294,15 @@ func AssignCoupon(ctx *gin.Context) {
 		return
 	}
 
-	ok, err := redis.SAdd(redis.GenCouponOwnersKey(couponName), tokenUsername)
+	ok, err := redis.SAdd(redis.GenCouponOwnersKey(salerName, couponName), tokenUsername)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"customer": tokenUsername,
-			"coupon":   couponName,
-			"ok":       ok,
-		}).Warn("[api.AssignCoupon] redis.SAdd error")
+		logger.WithFields(logrus.Fields{"ok": ok}).WithError(err).Warn("update coupon owners fail")
 	}
 
 	// push msg to mq
-	subscribeAssignCoupon := &(SubscribeAssignCoupon{SalerName: salerName, TokenUsername: tokenUsername, CouponName: couponName, CouponStock: couponStock})
-	models.NatsEncodedConn.Publish(models.AssignCoupon_Subj, subscribeAssignCoupon)
+	subscribeAssignCoupon := &(SubscribeAssignCoupon{
+		SalerName: salerName, TokenUsername: tokenUsername, CouponName: couponName, CouponStock: coupon.Stock})
+	_ = models.NatsEncodedConn.Publish(models.AssignCoupon_Subj, subscribeAssignCoupon)
 
 	ctx.JSON(201, gin.H{
 		"errMsg": "",

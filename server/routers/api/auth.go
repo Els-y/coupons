@@ -5,7 +5,6 @@ import (
 	"github.com/Els-y/coupons/server/pkgs/redis"
 	"github.com/Els-y/coupons/server/pkgs/utils"
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm"
 	"github.com/sirupsen/logrus"
 )
 
@@ -27,34 +26,29 @@ func Auth(ctx *gin.Context) {
 		return
 	}
 
-	user, err := models.GetUserWithPwd(req.Username, req.Password)
-	if gorm.IsRecordNotFoundError(err) {
-		ctx.JSON(401, gin.H{
-			"kind":   "",
-			"errMsg": "username or password wrong",
-		})
-		return
-	}
+	logger := logrus.WithFields(logrus.Fields{"func": "api.Auth", "username": req.Username})
+
+	user, err := GetUserWithCache(req.Username)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"username": req.Username,
-			"err":      err,
-		}).Warn("[api.Auth] models.GetUserWithPwd db error")
+		logger.WithError(err).Warn("GetUserKindWithCache db error")
 		ctx.JSON(401, gin.H{
 			"kind":   "",
 			"errMsg": "db error",
 		})
 		return
 	}
+	if user == nil || !models.CheckPwd(req.Password, user.Password) {
+		ctx.JSON(401, gin.H{
+			"kind":   "",
+			"errMsg": "username or password wrong",
+		})
+		return
+	}
 
-	kindStr := user.Kind
-	token := utils.EncodeToken(user.Username, kindStr)
+	token := utils.EncodeToken(user.Username, user.Kind)
 	err = redis.Set(redis.GenAuthorizationKey(token), 1, -1)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{
-			"username": req.Username,
-			"err":      err,
-		}).Warn("[api.Auth] redis error")
+		logger.WithError(err).Warn("redis error")
 		ctx.JSON(401, gin.H{
 			"kind":   "",
 			"errMsg": "redis error",
@@ -64,7 +58,7 @@ func Auth(ctx *gin.Context) {
 
 	ctx.Header("Authorization", token)
 	ctx.JSON(200, gin.H{
-		"kind":   kindStr,
+		"kind":   user.Kind,
 		"errMsg": "",
 	})
 }

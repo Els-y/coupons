@@ -33,7 +33,7 @@ func GetCouponsWithPage(username string, isSaler bool, page int) ([]Coupon, erro
 	return coupons, err
 }
 
-func AddCoupon(username, name, description string, stock, amount int) error {
+func AddCoupon(username, name, description string, stock, amount int) (*Coupon, error) {
 	coupon, err := GetCoupon(username, name)
 	if gorm.IsRecordNotFoundError(err) {
 		coupon = &Coupon{
@@ -44,16 +44,15 @@ func AddCoupon(username, name, description string, stock, amount int) error {
 			Amount:      amount,
 			Left:        amount,
 		}
-		return db.Create(coupon).Error
+		return coupon, db.Create(coupon).Error
 	}
-
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = db.Exec("UPDATE coupon SET `amount`=`amount`+?, `left`=`left`+? WHERE `username`=? AND `coupons`=?",
 		amount, amount, username, name).Error
-	return err
+	return coupon, err
 }
 
 func AssignCoupon(salerName, customerName string, couponName string, couponStock int) (bool, error) {

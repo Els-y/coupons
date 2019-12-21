@@ -24,7 +24,7 @@ func ExistsUsername(username string) (bool, error) {
 	return true, nil
 }
 
-func AddUser(username, password string, kind string) error {
+func AddUser(username, password, kind string) (*User, error) {
 	user := User{
 		Username: username,
 		Password: utils.MD5Encode(password),
@@ -32,9 +32,9 @@ func AddUser(username, password string, kind string) error {
 	}
 
 	if err := db.Create(&user).Error; err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return &user, nil
 }
 
 func GetUser(username string) (*User, error) {
@@ -53,4 +53,8 @@ func GetUserWithPwd(username, password string) (*User, error) {
 		return nil, err
 	}
 	return &user, nil
+}
+
+func CheckPwd(password, target string) bool {
+	return utils.MD5Encode(password) == target
 }

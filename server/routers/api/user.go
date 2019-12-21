@@ -15,59 +15,54 @@ type AddUserReq struct {
 
 func AddUser(ctx *gin.Context) {
 	var req AddUserReq
-
 	err := ctx.BindJSON(&req)
 	if err != nil {
-		logrus.Infof("[api.AddUser] ctx.BindJSON error, username: %v, err: %v", req.Username, err.Error())
+		logrus.WithError(err).Warn("[api.AddUser] ctx.BindJSON error")
 		ctx.JSON(400, gin.H{
 			"errMsg": "params error",
 		})
 		return
 	}
 
+	logger := logrus.WithFields(logrus.Fields{"func": "api.AddUser", "username": req.Username, "kind": req.Kind})
 	if req.Kind != models.KindCustomerStr && req.Kind != models.KindSalerStr {
-		logrus.Infof("[api.AddUser] kind is not customer or saler : %v", req.Kind)
+		logger.Info("kind is not customer or saler")
 		ctx.JSON(400, gin.H{
 			"errMsg": "params kind error",
 		})
 		return
 	}
 
-	userKindStr, err := GetUserKindWithCache(req.Username)
-
+	user, err := GetUserWithCache(req.Username)
 	if err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{
-			"username": req.Username,
-		}).Warn("[api.AddUser] GetUserKindWithCache db error")
+		logger.WithError(err).Warn("GetUserKindWithCache db error")
 		ctx.JSON(400, gin.H{
 			"errMsg": "db error",
 		})
 		return
 	}
 
-	if userKindStr != "" {
+	if user != nil {
 		ctx.JSON(400, gin.H{
 			"errMsg": "username exists",
 		})
 		return
 	}
 
-	err = models.AddUser(req.Username, req.Password, req.Kind)
+	user, err = models.AddUser(req.Username, req.Password, req.Kind)
 	if err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{
-			"username": req.Username,
-		}).Warn("[api.AddUser] models.AddUser db error")
+		logger.WithError(err).Warn("models.AddUser db error")
 		ctx.JSON(400, gin.H{
 			"errMsg": "db error",
 		})
 		return
 	}
 
-	err = redis.Set(redis.GenUserKindKey(req.Username), req.Kind, 5*60)
+	err = redis.Set(redis.GenUserKey(req.Username), user, 5*60)
 	if err != nil {
-		logrus.WithError(err).Warn("[api.AddUser] redis.Set error")
+		logger.WithError(err).Warn("cache user fail")
 	} else {
-		logrus.Info("[api.AddUser] redis.Set success")
+		logger.Info("cache user success")
 	}
 
 	ctx.JSON(201, gin.H{
