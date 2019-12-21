@@ -16,7 +16,7 @@ services:
       - db_nw
 
   server1:
-    build: ./server
+    image: elsyejq/coupon_server
     restart: always
     depends_on:
       - mysql
@@ -25,7 +25,7 @@ services:
       - db_nw
 
   server2:
-    build: ./server
+    image: elsyejq/coupon_server
     restart: always
     depends_on:
       - mysql
@@ -62,8 +62,7 @@ services:
       - db_nw
 
   subscriber1:
-    build:
-      context: ./subscriber
+    image: elsyejq/coupon_subscriber
     restart: always
     depends_on:
       - mysql
@@ -71,8 +70,7 @@ services:
       - db_nw
 
   subscriber2:
-    build:
-      context: ./subscriber
+    image: elsyejq/coupon_subscriber
     restart: always
     depends_on:
       - mysql
