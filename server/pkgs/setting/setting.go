@@ -47,6 +47,12 @@ type Redis struct {
 
 var RedisSetting = &Redis{}
 
+type Nats struct {
+	Host string
+}
+
+var NatsSetting = &Nats{}
+
 var cfg *ini.File
 
 // Setup initialize the configuration instance
@@ -61,6 +67,7 @@ func Setup() {
 	mapTo("server", ServerSetting)
 	mapTo("database", DatabaseSetting)
 	mapTo("redis", RedisSetting)
+	mapTo("nats", NatsSetting)
 
 	ServerSetting.ReadTimeout = ServerSetting.ReadTimeout * time.Second
 	ServerSetting.WriteTimeout = ServerSetting.WriteTimeout * time.Second

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/Els-y/coupons/server/models"
+	"github.com/Els-y/coupons/server/pkgs/mq"
 	"github.com/Els-y/coupons/server/pkgs/redis"
 	"github.com/Els-y/coupons/server/pkgs/setting"
 	"github.com/Els-y/coupons/server/routers"
@@ -15,6 +16,7 @@ func init() {
 	setting.Setup()
 	models.Setup()
 	redis.Setup()
+	mq.Setup()
 }
 
 func main() {

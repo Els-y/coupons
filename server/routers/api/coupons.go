@@ -2,10 +2,10 @@ package api
 
 import (
 	"github.com/Els-y/coupons/server/models"
+	"github.com/Els-y/coupons/server/pkgs/mq"
 	"github.com/Els-y/coupons/server/pkgs/redis"
 	"github.com/Els-y/coupons/server/pkgs/utils"
 	"github.com/gin-gonic/gin"
-	"github.com/nats-io/nats.go"
 	"github.com/sirupsen/logrus"
 	"strconv"
 )
@@ -22,20 +22,6 @@ type SubscribeAssignCoupon struct {
 	TokenUsername string
 	CouponName    string
 	CouponStock   int
-}
-
-func init() {
-	models.Nc, models.Nat_err = nats.Connect(models.NatsUrl)
-	if models.Nat_err != nil {
-		logrus.Infof("[queue.init] subscribe nats.Connect url error, url: %v, err: %v", models.NatsUrl, models.Nat_err.Error())
-		return
-	}
-
-	models.NatsEncodedConn, models.Nat_err = nats.NewEncodedConn(models.Nc, nats.JSON_ENCODER)
-	if models.Nat_err != nil {
-		logrus.Infof("[queue.init] subscribe nats.NewEncodedConn error, err: %v", models.Nat_err.Error())
-		return
-	}
 }
 
 func AddCoupons(ctx *gin.Context) {
@@ -273,7 +259,7 @@ func AssignCoupon(ctx *gin.Context) {
 	// push msg to mq
 	subscribeAssignCoupon := &(SubscribeAssignCoupon{
 		SalerName: salerName, TokenUsername: tokenUsername, CouponName: couponName, CouponStock: coupon.Stock})
-	_ = models.NatsEncodedConn.Publish(models.AssignCoupon_Subj, subscribeAssignCoupon)
+	_ = mq.NatsEncodedConn.Publish(mq.AssignCouponSubj, subscribeAssignCoupon)
 
 	ctx.JSON(201, gin.H{
 		"errMsg": "",
